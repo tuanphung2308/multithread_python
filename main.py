@@ -1,7 +1,6 @@
 import glob
 import time
 import threading
-import bisect
 
 vals = []
 thread_lock = threading.Lock()
@@ -20,7 +19,7 @@ class KeyWrapper:
 
 
 def process_text_file(file_path):
-    file1 = open(file_path, 'r', encodings='utf-8')
+    file1 = open(file_path, 'r')
     count = 0
     current_vals = []
 
@@ -35,31 +34,34 @@ def process_text_file(file_path):
         if not line:
             break
         line = line.strip()
-        words = line.split(" ")
+        words = line.split()
         try:
-            d_metal_col = words[3]
+            d_metal_col = words[5]
             print(d_metal_col)
             parsed_dmetal = float(d_metal_col)
             if parsed_dmetal > 5:
-                global vals
-                thread_lock.acquire()
-                bslindex = bisect.bisect_left(KeyWrapper(vals, key=lambda c: c['dmetal']), parsed_dmetal)
-                print(bslindex)
                 row = {
                     'dmetal': parsed_dmetal,
                     'line': line
                 }
-                vals.insert(bslindex, row)
-                thread_lock.release()
+                current_vals.append(row)
         except Exception as e:
             print(e)
             print('Invalid Dmetal Value')
             print("Line{}: {}".format(count, line.strip()))
+            print(d_metal_col)
     file1.close()
 
+    current_vals = sorted(current_vals, key=lambda x: x['dmetal'])
+    global vals
+    thread_lock.acquire()
+    vals = current_vals + vals
+    vals = sorted(vals, key=lambda x: x['dmetal'])
+    thread_lock.release()
 
-res = [f for f in glob.glob("/u/thaison/transfer/Training_Intern_Dmetal/*ascii*")]
-# res = [f for f in glob.glob("./*ascii*")]
+
+# res = [f for f in glob.glob("/u/thaison/transfer/Training_Intern_Dmetal/*ascii*")]
+res = [f for f in glob.glob("./*ascii*")]
 try:
     t = time.time()
     for f in res:
